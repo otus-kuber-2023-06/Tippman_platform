@@ -30,3 +30,15 @@ Service Account:      coredns
 Controlled By:  ReplicaSet/coredns-787d4945fb
 ...
 ```
+
+## Задание с *
+
+---
+В контейнере frontend отсутствовали переменные среды:
+- PRODUCT_CATALOG_SERVICE_ADDR
+- CURRENCY_SERVICE_ADDR
+- CART_SERVICE_ADDR
+- RECOMMENDATION_SERVICE_ADDR
+- CHECKOUT_SERVICE_ADDR
+- SHIPPING_SERVICE_ADDR
+- AD_SERVICE_ADDR
