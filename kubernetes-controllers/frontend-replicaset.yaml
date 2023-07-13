@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: server
+          image: tippman/hipster-shop-frontend
+          env:
+          - name: PRODUCT_CATALOG_SERVICE_ADDR
+            value: NONE
+          - name: CURRENCY_SERVICE_ADDR
+            value: NONE
+          - name: CART_SERVICE_ADDR
+            value: NONE
+          - name: RECOMMENDATION_SERVICE_ADDR
+            value: NONE
+          - name: CHECKOUT_SERVICE_ADDR
+            value: NONE
+          - name: SHIPPING_SERVICE_ADDR
+            value: NONE
+          - name: AD_SERVICE_ADDR
+            value: NONE
