@@ -1,8 +1,6 @@
 # Tippman_platform
 
-## ДЗ №1
-
----
+## #1 Intro
 
 ### В процессе сделано:
 - Собран и загружен в докер-хаб образ [tippman/kubernetes-intro](https://hub.docker.com/repository/docker/tippman/kubernetes-intro/general)
@@ -48,9 +46,7 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
 ...
 ```
 
-## ДЗ №2
-
----
+## #2 Controllers
 
 ### В процессе сделано:
   - Развернут кластер с помощью kind с 3 master и 3 worker нодами.
@@ -95,3 +91,61 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
               operator: Exists
               effect: NoSchedule
        ```
+
+
+## #3 Networks
+
+### В процессе сделано:
+- Добавлены проверки подов `web`: `livenessProbe` `readinessProbe`.
+- Добавлен `Deployment` `web-deploy.yaml` со стратегией развертывания.
+- Добавлен `Service` с типом `ClusterIP` - `web-svc-cip.yaml` для доступа к `web` подам через статичный IP внутри кластера.
+- Прокси кластера переведен в режим `ipvc`.
+- Добавлен балансировщик нагрузки `IPAddressPool` `MetalLB` с пулом адресов `172.17.255.1-172.17.255.255`.
+- - Добавлен `Service` `coredns/dns-svc-lb.yaml` с закрепленным IP для доступа к кластеру снаружи.
+- Добавлен маршрут для резолвинга запросов с `IPAddressPool` в кластер:
+  ```shell
+  Kernel IP routing table
+  ...
+  172.17.255.0    192.168.49.2    255.255.255.0   UG    0      0        0 br-6d9f6291bbf3
+  ...
+  ```
+- Добавлен `Ingress` `nginx-ingress` с контроллером.
+- Приложение `web` подключено к `Ingress` с помощью  `web-ingress.yaml`
+- Установлен `kubernetes-dashboard`. Доступ к нему осуществляется по IP балансировщика `MetalLB` с префиксом `/dashboard`.
+- Добавлен `Deployment` с 3 репликами `web` приложения - `web-canary` для проверки `canary` распределения трафика.
+- Добавлены `Service` и `Ingress` для `web-canary`.  
+
+Вопросы по методичке:
+1. Почему следующая конфигурация валидна, но не имеет смысла?
+   ```
+   livenessProbe:
+      exec:
+        command:
+           - 'sh'
+           - '-c'
+           - 'ps aux | grep my_web_server_process'
+   ```
+   - Эта проверка будет проходить успешна в любом случае, т.к. при отсутствии процесса `my_web_server_process` grep вернет свой процесс
+   ```shell
+   user     344777  0.0  0.0   6476  2320 pts/0    S+   12:20   0:00 grep --color=auto my_web_server_process
+   ```
+2. Бывают ли ситуации, когда она все-таки имеет смысл?
+   - В таком виде нет.
+
+### Проверка работоспособности:
+- Основная часть:  
+  Внутри кластера выполнить `ipvsadm --list -n` и `ping clusterIP`.
+- CoreDNS: 
+  ```shell
+  curl http://172.17.255.10/index.html
+  nslookup coredns-svc-tcp.kube-system.svc.cluster.local 172.17.255.10
+  ```
+- MetalLB:
+  ```shell
+  curl http://172.17.255.3/web/index.html
+  ```
+  ![](kubernetes-networks/images/load_balancer_ip.png)
+- Dashboard:
+  ![](kubernetes-networks/images/dashboard_response.png)
+- Canary:
+  ![](kubernetes-networks/images/canary_check.png)
