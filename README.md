@@ -149,3 +149,38 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
   ![](kubernetes-networks/images/dashboard_response.png)
 - Canary:
   ![](kubernetes-networks/images/canary_check.png)
+
+
+## #4 Volumes
+
+### В процессе сделано:
+- Добавлен `StatefulSet` minio c PVC template запросом на 10Gi.
+- Добавлен Headless `Service` minio.
+- Созданы `Secrets` с кредами подключения к minio через `kubectl`.
+  ```shell
+  $ k create secret generic minio-access-key --from-literal=minio-access-key='minio'
+  $ k create secret generic minio-secret-key --from-literal=minio-secret-key='minio123'
+  ```
+- Добавлена конфигурация использования `Secrets` в `StatefulSet` манифест minio.
+- Добавлено 2 пода, разделяющих один `Volume` с типом `hostPath`.
+- Добавлены манифесты PV и PVC для созданных подов.
+- Проверено сохранение данных между подами, а также при их удалении.
+
+### Проверка работоспособности:
+Применить манифесты и проверить:
+- Установку переменных среды из секретов:
+  ```shell
+  $ k exec -it minio-0 -- /bin/sh -c 'echo $MINIO_ACCESS_KEY'
+  $ k exec -it minio-0 -- /bin/sh -c 'echo $MINIO_SECRET_KEY'
+  ```
+- Сохранение данных при удалении пода:
+  ```shell
+  $ k exec -it my-pod -- /bin/bash
+  > echo "Hello, Kubernetes Volumes!" > /app/data/data.txt
+  > exit
+  $ k delete pod my-pod
+  $ k apply -f my-pod2.yaml
+  $ k exec -it my-pod2 -- /bin/bash
+  > cat /app/data/data.txt
+  Hello, Kubernetes Volumes!
+  ```
