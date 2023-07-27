@@ -184,3 +184,11 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
   > cat /app/data/data.txt
   Hello, Kubernetes Volumes!
   ```
+  
+## #5 Security
+
+### В процессе сделано:
+-  Добавлены ServiceAccount:
+  - bob: роль admin для кластера
+  - dave: запрет на все действия с кластером
+  - carol: 
