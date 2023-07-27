@@ -184,3 +184,19 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
   > cat /app/data/data.txt
   Hello, Kubernetes Volumes!
   ```
+  
+## #5 Security
+
+### В процессе сделано:
+-  Добавлены ServiceAccount и роли:
+  - bob: роль admin для кластера
+  - dave: запрет на все действия с кластером
+  - carol: без настройки ролей
+  - Group ClusterRoleBinding для всех сервисных аккаунтов неймспейса `prometheus`
+  - jane: роль `admin` в рамках namespace dev
+  - ken: роль `view` в рамках Namespace dev
+
+### Проверка работоспособности:
+```shell
+kubectl auth can-i get deployments --as system:serviceaccount:<namaspace>:<serviceaccount_name> [-n <namespace>]
+```
