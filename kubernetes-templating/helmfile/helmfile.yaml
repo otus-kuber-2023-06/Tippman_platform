@@ -1,0 +1,38 @@
+helmDefaults:
+  wait: true
+  verify: false
+
+repositories:
+  - name: nginx-ingress
+    url: https://kubernetes.github.io/ingress-nginx
+  - name: jetstack
+    url: https://charts.jetstack.io
+  - name: harbor
+    url: https://helm.goharbor.io
+releases:
+  - name: nginx-ingress
+    namespace: nginx-ingress
+    chart: nginx-ingress/ingress-nginx
+  - name: cert-manager
+    namespace: cert-manager
+    chart: jetstack/cert-manager
+    version: 1.12.0
+    set:
+      - name: installCRDs
+        value: true
+    hooks:
+      - events: ["postsync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "apply"
+          - "-f"
+          - "../cert-manager/acme-cluster-issuer.yaml"
+  - name: harbor
+    namespace: harbor
+    chart: harbor/harbor
+    needs:
+      - nginx-ingress/nginx-ingress
+      - cert-manager/cert-manager
+    values:
+      - "../harbor/values.yaml"

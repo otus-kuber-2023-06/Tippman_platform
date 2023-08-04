@@ -1,0 +1,4 @@
+resources:
+  - currencyservice-deployment.yaml
+  - currencyservice-service.yaml
+namespace: hipster-shop
