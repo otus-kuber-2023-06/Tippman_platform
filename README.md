@@ -200,3 +200,66 @@ Controlled By:  ReplicaSet/coredns-787d4945fb
 ```shell
 kubectl auth can-i get deployments --as system:serviceaccount:<namaspace>:<serviceaccount_name> [-n <namespace>]
 ```
+
+## #6 Templating
+### В процессе сделано:
+- Поднят YandexCloud Managed Kubernetes кластер
+- Добавлены helm репозитории `helm repo add <name> <repo url>`, repo urls:
+  - https://kubernetes.github.io/ingress-nginx
+  - https://charts.jetstack.io
+  - https://chartmuseum.github.io/charts
+  - https://helm.goharbor.io
+- Установлено из helm чартов: `ingress-nginx`, `cert-manager` c ClusterIssuer:
+    ```shell
+    helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx --namespace=ingress-nginx --create-namespace
+    ```
+    ```shell
+    helm upgrade --install cert-manager jetstack/cert-manager --namespace cert-manager --create-namespace --set installCRDs=true
+    kubectl apply -f kubernetes-templating/cert-manager/acme-cluster-issuer.yaml
+    ```
+- Добавлены values.yaml для `chartmuseum` и `harbor`. Установлены `chartmuseum` и `harbor` с валидными сертификатами:
+    ```shell
+    helm upgrade --install chartmuseum chartmuseum/chartmuseum --namespace=chartmuseum --create-namespace -f kubernetes-templating/chartmuseum/values.yaml
+    ```
+    ```shell
+    helm upgrade --install harbor harbor/harbor --namespace harbor --create-namespace -f kubernetes-templating/harbor/values.yaml
+    ```
+- Добавлено описание использования `chartmuseum` в качестве собственного репозитория в chartmuseum/README.md
+- Установлен `helfile` и добавлен helmfile.yaml с `ingress-nginx`, `cert-manager` и `harbor`
+- Создан и задеплоен helm Chart для `hipster-shop`
+- Создан и установлен Chart `frontend` с `values.yaml`. В temlates чарта добалены deployment, ingress и service со значениями из `values.yaml`. Чарт упакован и залит в `harbor`.
+- Добавлена зависимость `frontend` в chart `hipster-shop`
+- Чарты `frontend` и `hipster-shop` залиты в `harbor`:
+  ```shell
+  helm package kubernetes-templating/frontend
+  helm push frontend-0.1.0.tgz oci://harbor.158.160.32.101.nip.io/hipster-shop
+  ```
+  ```shell
+  helm package kubernetes-templating/hipster-shop
+  helm push hipster-shop-0.1.0.tgz oci://harbor.158.160.32.101.nip.io/hipster-shop
+  ```
+- Kubecfg:
+  - Добавлены yaml файлы для payment-service и shipping-service
+  - Создан и установлен шаблон services.jsonnet
+  ```shell
+  kubecfg update services.jsonnet --namespace hipster-shop
+  ```
+- Kustomize:
+  - Добавлены stage и prod манифесты для currencyservice из microservices-demo/currencyservice
+  - Применены манифесты:
+  ```shell
+   # Apply resources from a directory containing kustomization.yaml - e.g. dir/kustomization.yaml
+   kubectl apply -k kubernetes-templating/kustomize/overrides/stage
+   kubectl apply -k kubernetes-templating/kustomize/overrides/prod
+  ```
+
+### Проверка работоспособности:
+https://chartmuseum.158.160.32.101.nip.io  
+https://harbor.158.160.32.101.nip.io
+![harbor.png](kubernetes-templating%2Fimages%2Fharbor.png)
+
+Kustomize:
+```shell
+cd kubernetes-templating/kustomize
+kustomize build
+```
