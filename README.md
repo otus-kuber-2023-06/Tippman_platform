@@ -263,3 +263,23 @@ Kustomize:
 cd kubernetes-templating/kustomize
 kustomize build
 ```
+
+
+## #7 Operators
+
+### В процессе сделано:
+- Добавлен CRD для Mysql CustomResources
+- Добавлен CustomResource `mysql-instance`
+- Добавлен контроллер оператора `mysql-operator.py` и шаблоны манифестов. Контроллер создает backup и restore-backup Jobs для сохранения данных в БД при удалении инстанса оператора из кластера.
+- Добавлен docker и залит в docker.hub образ с контроллером оператора.
+- Добавлены манифесты для деплоя оператора с необходимыми ролями и биндингами.
+
+
+## #7 Operators
+
+### В процессе сделано:
+- Добавлен CRD для Mysql CustomResources
+- Добавлен CustomResource `mysql-instance`
+- Добавлен контроллер оператора `mysql-operator.py` и шаблоны манифестов. Контроллер создает backup и restore-backup Jobs для сохранения данных в БД при удалении инстанса оператора из кластера.
+- Добавлен docker и залит в docker.hub образ с контроллером оператора.
+- Добавлены манифесты для деплоя оператора с необходимыми ролями и биндингами.

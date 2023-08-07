@@ -35,3 +35,9 @@ spec:
     singular: mysql
     shortNames:
       - ms
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

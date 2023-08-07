@@ -1,3 +1,7 @@
+import copy
+import json
+from pprint import pprint
+
 import kopf
 import yaml
 import kubernetes
@@ -45,7 +49,14 @@ def delete_success_jobs(mysql_instance_name):
 
 @kopf.on.create('otus.homework', 'v1', 'mysqls')
 # Функция, которая будет запускаться при создании объектов тип MySQL:
-def mysql_on_create(body, spec, **kwargs):
+def mysql_on_create(body: kopf.Body, spec, **kwargs):
+    print('body')
+    print(body.status)
+    pprint(body)
+    print('spec')
+    pprint(spec)
+    print('kwargs')
+    pprint(kwargs)
     name = body['metadata']['name']
     image = body['spec']['image']
     password = body['spec']['password']
@@ -80,16 +91,19 @@ def mysql_on_create(body, spec, **kwargs):
     # ^ Таким образом при удалении CR удалятся все, связанные с ним pv,pvc,svc, deployments
 
     api = kubernetes.client.CoreV1Api()
+
     # Создаем mysql PV:
     api.create_persistent_volume(persistent_volume)
     # Создаем mysql PVC:
     api.create_namespaced_persistent_volume_claim('default', persistent_volume_claim)
+
     # Создаем mysql SVC:
     api.create_namespaced_service('default', service)
 
     # Создаем mysql Deployment:
     api = kubernetes.client.AppsV1Api()
     api.create_namespaced_deployment('default', deployment)
+
     # Пытаемся восстановиться из backup
     try:
         api = kubernetes.client.BatchV1Api()
@@ -113,6 +127,37 @@ def mysql_on_create(body, spec, **kwargs):
     except kubernetes.client.rest.ApiException:
         pass
 
+    with kubernetes.client.ApiClient() as api_client:
+        cr = kubernetes.client.CustomObjectsApi(api_client)
+        cri = cr.get_namespaced_custom_object(
+            group='otus.homework',
+            version='v1',
+            namespace=kwargs['namespace'],
+            plural='mysqls',
+            name=kwargs['name'],
+        )
+        print('custom res=')
+        pprint(cri)
+        resources = cr.list_namespaced_custom_object(
+            group='otus.homework',
+            version='v1',
+            namespace=kwargs['namespace'],
+            plural='mysqls',
+        )
+        print('items')
+        pprint(resources)
+        print(f'name={kwargs["name"]}')
+        cr.patch_namespaced_custom_object_status(
+            group='otus.homework',
+            version='v1',
+            namespace=kwargs['namespace'],
+            plural='mysqls',
+            name=kwargs['name'],
+            body={
+                'status': {'statusssss': '123'},
+            },
+        )
+
 
 @kopf.on.delete('otus.homework', 'v1', 'mysqls')
 def delete_object_make_backup(body, **kwargs):
@@ -132,4 +177,9 @@ def delete_object_make_backup(body, **kwargs):
         'database': database})
     api.create_namespaced_job('default', backup_job)
     wait_until_job_end(f"backup-{name}-job")
+
+    # Удаляем mysql PV:
+    api = kubernetes.client.CoreV1Api()
+    api.delete_persistent_volume(f"{name}-pv")
+
     return {'message': "mysql and its children resources deleted"}
