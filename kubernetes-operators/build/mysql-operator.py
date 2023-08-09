@@ -1,12 +1,16 @@
-import copy
-import json
-from pprint import pprint
+import dataclasses
+import datetime
 
 import kopf
+import pytz
 import yaml
 import kubernetes
 import time
 from jinja2 import Environment, FileSystemLoader
+
+GROUP = 'otus.homework'
+VERSION = 'v1'
+NAME = 'mysqls'
 
 
 def wait_until_job_end(jobname):
@@ -19,9 +23,9 @@ def wait_until_job_end(jobname):
         jobs = api.list_namespaced_job('default')
         for job in jobs.items:
             if job.metadata.name == jobname:
-                print(f"job with { jobname }  found,wait untill end")
+                print(f"job with {jobname} found,wait untill end")
                 if job.status.succeeded == 1:
-                    print(f"job with { jobname }  success")
+                    print(f"job with {jobname}  success")
                     job_finished = True
 
 
@@ -35,12 +39,16 @@ def render_template(filename, vars_dict):
 
 def delete_success_jobs(mysql_instance_name):
     print("start deletion")
+    jobs_list = [
+        f'backup-{mysql_instance_name}-job',
+        f'restore-{mysql_instance_name}-job',
+        f'change-password-{mysql_instance_name}-job',
+    ]
     api = kubernetes.client.BatchV1Api()
     jobs = api.list_namespaced_job('default')
     for job in jobs.items:
         jobname = job.metadata.name
-        if (jobname == f"backup-{mysql_instance_name}-job") or \
-                (jobname == f"restore-{mysql_instance_name}-job"):
+        if jobname in jobs_list:
             if job.status.succeeded == 1:
                 api.delete_namespaced_job(jobname,
                                           'default',
@@ -55,10 +63,9 @@ def set_custom_object_status(obj_params: dict, status: dict):
     )
 
 
-@kopf.on.create('otus.homework', 'v1', 'mysqls')
+@kopf.on.create(GROUP, VERSION, NAME)
 # Функция, которая будет запускаться при создании объектов тип MySQL:
-def mysql_on_create(body: kopf.Body, spec, **kwargs):
-    name = body['metadata']['name']
+def mysql_on_create(body: kopf.Body, name, namespace, **_):
     image = body['spec']['image']
     password = body['spec']['password']
     database = body['spec']['database']
@@ -115,11 +122,10 @@ def mysql_on_create(body: kopf.Body, spec, **kwargs):
     else:
         is_restored = True
 
-    # Cоздаем PVC  и PV для бэкапов:
+    # Cоздаем PVC и PV для бэкапов:
     try:
         backup_pv = render_template('backup-pv.yml.j2', {'name': name})
         api = kubernetes.client.CoreV1Api()
-        print(api.create_persistent_volume(backup_pv))
         api.create_persistent_volume(backup_pv)
     except kubernetes.client.rest.ApiException:
         pass
@@ -134,26 +140,25 @@ def mysql_on_create(body: kopf.Body, spec, **kwargs):
     # Устанавливаем статус Subresource
     restore_verb = 'without' if not is_restored else 'with'
     custom_object_params = dict(
-        group='otus.homework',
-        version='v1',
-        namespace=kwargs['namespace'],
-        plural='mysqls',
-        name=kwargs['name'],
+        group=GROUP,
+        version=VERSION,
+        namespace=namespace,
+        plural=NAME,
+        name=name,
     )
     new_status = {
         'status': {
             'kind': '',
             'mysql_on_create': {
-                'message': f'{kwargs["name"]} created {restore_verb} restore-job'
+                'message': f'{name} created {restore_verb} restore-job'
             }
         }
     }
     set_custom_object_status(custom_object_params, new_status)
 
 
-@kopf.on.delete('otus.homework', 'v1', 'mysqls')
-def delete_object_make_backup(body, **kwargs):
-    name = body['metadata']['name']
+@kopf.on.delete(GROUP, VERSION, NAME)
+def delete_object_make_backup(body, name, **_):
     image = body['spec']['image']
     password = body['spec']['password']
     database = body['spec']['database']
@@ -175,3 +180,56 @@ def delete_object_make_backup(body, **kwargs):
     api.delete_persistent_volume(f"{name}-pv")
 
     return {'message': "mysql and its children resources deleted"}
+
+
+@kopf.on.update(GROUP, VERSION, NAME)
+def update_object_change_password(body, spec, old, new, name, namespace, **_):
+    old_password = old['spec']['password']
+    new_password = new['spec']['password']
+    if old_password != new_password:
+        # Создаем Job на изменение пароля
+        try:
+            change_password_job = render_template(
+                'change-password-job.yml.j2',
+                dict(
+                    name=name,
+                    old_password=old_password,
+                    new_password=new_password,
+                )
+            )
+            api = kubernetes.client.BatchV1Api()
+            api.create_namespaced_job('default', change_password_job)
+            wait_until_job_end(f'change-password-{name}-job')
+        except kubernetes.client.exceptions.ApiException as exc:
+            kopf.exception(
+                body,
+                reason='Password changing',
+                message=f"Change password failed with exception: {exc}",
+            )
+        else:
+            # Если Job не вызвала ошибок - обновляем деплоймент
+            api = kubernetes.client.AppsV1Api()
+            deployment = render_template(
+                'mysql-deployment.yml.j2',
+                {
+                    'name': name,
+                    'image': spec['image'],
+                    'password': new_password,
+                    'database': spec['database'],
+                }
+            )
+            deployment['spec']['template']['metadata']['annotations'] = {
+                "kubectl.kubernetes.io/restartedAt": datetime.datetime.utcnow()
+                .replace(tzinfo=pytz.UTC)
+                .isoformat()
+            }
+            api.patch_namespaced_deployment(
+                name=name,
+                namespace=namespace,
+                body=deployment,
+            )
+            kopf.info(
+                body,
+                reason='Password changing',
+                message='MySQL password has been successfully changed.',
+            )
