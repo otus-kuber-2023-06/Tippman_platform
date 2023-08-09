@@ -29,15 +29,17 @@ spec:
                 - database
                 - password
                 - storage_size
+            status:
+              type: object
+              x-kubernetes-preserve-unknown-fields: true
+              properties:
+                kind:
+                  type: string
+      subresources:
+        status: { }
   names:                # различные форматы имени объекта CR
     kind: MySQL         # kind CR
     plural: mysqls
     singular: mysql
     shortNames:
       - ms
-status:
-  acceptedNames:
-    kind: ""
-    plural: ""
-  conditions: []
-  storedVersions: []

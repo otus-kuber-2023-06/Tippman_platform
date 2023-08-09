@@ -47,16 +47,17 @@ def delete_success_jobs(mysql_instance_name):
                                           propagation_policy='Background')
 
 
+def set_custom_object_status(obj_params: dict, status: dict):
+    custom_object = kubernetes.client.CustomObjectsApi()
+    custom_object.patch_namespaced_custom_object_status(
+        **obj_params,
+        body=status,
+    )
+
+
 @kopf.on.create('otus.homework', 'v1', 'mysqls')
 # Функция, которая будет запускаться при создании объектов тип MySQL:
 def mysql_on_create(body: kopf.Body, spec, **kwargs):
-    print('body')
-    print(body.status)
-    pprint(body)
-    print('spec')
-    pprint(spec)
-    print('kwargs')
-    pprint(kwargs)
     name = body['metadata']['name']
     image = body['spec']['image']
     password = body['spec']['password']
@@ -105,11 +106,14 @@ def mysql_on_create(body: kopf.Body, spec, **kwargs):
     api.create_namespaced_deployment('default', deployment)
 
     # Пытаемся восстановиться из backup
+    is_restored = False
     try:
         api = kubernetes.client.BatchV1Api()
         api.create_namespaced_job('default', restore_job)
     except kubernetes.client.rest.ApiException:
         pass
+    else:
+        is_restored = True
 
     # Cоздаем PVC  и PV для бэкапов:
     try:
@@ -127,36 +131,24 @@ def mysql_on_create(body: kopf.Body, spec, **kwargs):
     except kubernetes.client.rest.ApiException:
         pass
 
-    with kubernetes.client.ApiClient() as api_client:
-        cr = kubernetes.client.CustomObjectsApi(api_client)
-        cri = cr.get_namespaced_custom_object(
-            group='otus.homework',
-            version='v1',
-            namespace=kwargs['namespace'],
-            plural='mysqls',
-            name=kwargs['name'],
-        )
-        print('custom res=')
-        pprint(cri)
-        resources = cr.list_namespaced_custom_object(
-            group='otus.homework',
-            version='v1',
-            namespace=kwargs['namespace'],
-            plural='mysqls',
-        )
-        print('items')
-        pprint(resources)
-        print(f'name={kwargs["name"]}')
-        cr.patch_namespaced_custom_object_status(
-            group='otus.homework',
-            version='v1',
-            namespace=kwargs['namespace'],
-            plural='mysqls',
-            name=kwargs['name'],
-            body={
-                'status': {'statusssss': '123'},
-            },
-        )
+    # Устанавливаем статус Subresource
+    restore_verb = 'without' if not is_restored else 'with'
+    custom_object_params = dict(
+        group='otus.homework',
+        version='v1',
+        namespace=kwargs['namespace'],
+        plural='mysqls',
+        name=kwargs['name'],
+    )
+    new_status = {
+        'status': {
+            'kind': '',
+            'mysql_on_create': {
+                'message': f'{kwargs["name"]} created {restore_verb} restore-job'
+            }
+        }
+    }
+    set_custom_object_status(custom_object_params, new_status)
 
 
 @kopf.on.delete('otus.homework', 'v1', 'mysqls')
