@@ -273,4 +273,100 @@ kustomize build
 - Добавлен docker и залит в docker.hub образ с контроллером оператора.
 - Добавлены манифесты для деплоя оператора с необходимыми ролями и биндингами.
 - Добавлена установка статуса субресурсов.
-- Добавлено изменение пароля 
+- Добавлено изменение пароля.
+
+### Проверка работоспособности:
+- Применить crd и сr yaml. Добавить в бд данные, удалить CR и создать его заново, проверить сохранение данных в бд.
+- Установка статуса subresouce:
+  ![cr-status.png](kubernetes-operators%2Fimages%2Fcr-status.png)
+  
+  ```python
+    GROUP = 'otus.homework'
+    VERSION = 'v1'
+    NAME = 'mysqls'
+  
+    # Устанавливаем статус Subresource
+    restore_verb = 'without' if not is_restored else 'with'
+    custom_object_params = dict(
+        group=GROUP,
+        version=VERSION,
+        namespace=namespace,
+        plural=NAME,
+        name=name,
+    )
+    new_status = {
+        'status': {
+            'kind': '',
+            'mysql_on_create': {
+                'message': f'{name} created {restore_verb} restore-job'
+            }
+        }
+    }
+    set_custom_object_status(custom_object_params, new_status)
+  
+    def set_custom_object_status(obj_params: dict, status: dict):
+        custom_object = kubernetes.client.CustomObjectsApi()
+        custom_object.patch_namespaced_custom_object_status(
+            **obj_params,
+            body=status,
+        )
+  ```
+- Смена root пароля:
+  - Создаем джобу с командой на изменение пароля  
+    [change-password-job.yml.j2](kubernetes-operators%2Fbuild%2Ftemplates%2Fchange-password-job.yml.j2)
+  - Обновляем деплоймент для изменения переменных среды
+    ```python
+    @kopf.on.update(GROUP, VERSION, NAME)
+    def update_object_change_password(body, spec, old, new, name, namespace, **_):
+        old_password = old['spec']['password']
+        new_password = new['spec']['password']
+        if old_password != new_password:
+            # Создаем Job на изменение пароля
+            try:
+                change_password_job = render_template(
+                    'change-password-job.yml.j2',
+                    dict(
+                        name=name,
+                        old_password=old_password,
+                        new_password=new_password,
+                    )
+                )
+                api = kubernetes.client.BatchV1Api()
+                api.create_namespaced_job('default', change_password_job)
+                wait_until_job_end(f'change-password-{name}-job')
+            except kubernetes.client.exceptions.ApiException as exc:
+                kopf.exception(
+                    body,
+                    reason='Password changing',
+                    message=f"Change password failed with exception: {exc}",
+                )
+            else:
+                # Если Job не вызвала ошибок - обновляем деплоймент
+                api = kubernetes.client.AppsV1Api()
+                deployment = render_template(
+                    'mysql-deployment.yml.j2',
+                    {
+                        'name': name,
+                        'image': spec['image'],
+                        'password': new_password,
+                        'database': spec['database'],
+                    }
+                )
+                deployment['spec']['template']['metadata']['annotations'] = {
+                    "kubectl.kubernetes.io/restartedAt": datetime.datetime.utcnow()
+                    .replace(tzinfo=pytz.UTC)
+                    .isoformat()
+                }
+                api.patch_namespaced_deployment(
+                    name=name,
+                    namespace=namespace,
+                    body=deployment,
+                )
+                kopf.info(
+                    body,
+                    reason='Password changing',
+                    message='MySQL password has been successfully changed.',
+                )
+    ```
+  - Перед сообщением AccessDenied был обновлен пароль в cr.yaml и применен манифест. Далее доступ по новому паролю:
+    ![change-pass.png](kubernetes-operators%2Fimages%2Fchange-pass.png)
