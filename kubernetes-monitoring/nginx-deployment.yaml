@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      name: web
+      labels:
+        app: web
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:stable-alpine3.17
+        volumeMounts:
+          - name: config
+            mountPath: /etc/nginx/conf.d
+            readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: nginx-stub-status-config
+            items:
+              - key: stub-status.conf
+                path: stub-status.conf

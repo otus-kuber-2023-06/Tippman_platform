@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-exporter
+  labels:
+    app: exporter
+spec:
+  containers:
+    - name: nginx-exporter
+      image: nginx/nginx-prometheus-exporter:latest
+      imagePullPolicy: IfNotPresent
+      args:
+        - -nginx.scrape-uri=http://nginx-svc/basic_status
+  restartPolicy: Always
