@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-exporter-svc
+  labels:
+    app: exporter
+spec:
+  selector:
+    app: exporter
+  ports:
+    - name: metrics
+      protocol: TCP
+      port: 9113
+      targetPort: 9113
+  type: ClusterIP

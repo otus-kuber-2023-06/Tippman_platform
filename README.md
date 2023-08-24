@@ -370,3 +370,18 @@ kustomize build
     ```
   - Перед сообщением AccessDenied был обновлен пароль в cr.yaml и применен манифест. Далее доступ по новому паролю:
     ![change-pass.png](kubernetes-operators%2Fimages%2Fchange-pass.png)
+
+
+## #8 Monitoring
+
+### В процессе сделано:
+- Развернут Deployment c 3 репликами nginx
+- Добавлен сервис для nginx
+- Добавлен под с ngnix-exporter, собирающий метрики с nginx сервиса
+- Добавлен сервис для ngnix-exporter
+- Развернут prometheus operator
+- Добавлен Prometheus ServiceMonitor для ngnix-exporter
+- Задеплоена Grafana и добавлен дашборд ngnix-exporter
+
+### Проверка работоспособности:
+![grafana-scrn.png](kubernetes-monitoring%2Fimages%2Fgrafana-scrn.png)

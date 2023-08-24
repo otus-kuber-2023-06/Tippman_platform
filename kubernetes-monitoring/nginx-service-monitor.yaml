@@ -1,0 +1,12 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: web-exporter-monitor
+  labels:
+    app: exporter
+spec:
+  selector:
+    matchLabels:
+      app: exporter
+  endpoints:
+  - port: metrics
