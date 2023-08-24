@@ -76,7 +76,8 @@ defaultRules:
   annotations: {}
 
   ## Additional labels for PrometheusRule alerts
-  additionalRuleLabels: {}
+  additionalRuleLabels:
+    cluster: "loki"
 
   ## Additional annotations for PrometheusRule alerts
   additionalRuleAnnotations: {}
@@ -350,7 +351,7 @@ alertmanager:
     ## Hosts must be provided if Ingress is enabled.
     ##
     hosts:
-      - alertmanager.158.160.105.82.nip.io
+      - alertmanager.158.160.120.61.nip.io
 
     ## Paths to use for ingress rules - one path should match the alertmanagerSpec.routePrefix
     ##
@@ -706,8 +707,7 @@ alertmanager:
     ## Define which Nodes the Pods are scheduled on.
     ## ref: https://kubernetes.io/docs/user-guide/node-selection/
     ##
-    nodeSelector:
-      pool: infra-pool
+    nodeSelector: {}
 
     ## Define resources requests and limits for single Pods.
     ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
@@ -745,11 +745,7 @@ alertmanager:
     ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
-    tolerations:
-      - key: node-role
-        operator: Equal
-        value: infra
-        effect: NoSchedule
+    tolerations: []
     # - key: "key"
     #   operator: "Equal"
     #   value: "value"
@@ -912,7 +908,7 @@ grafana:
     # hosts:
     #   - grafana.domain.com
     hosts:
-      - grafana.158.160.105.82.nip.io
+      - grafana.158.160.120.61.nip.io
 
     ## Path for grafana ingress
     path: /
@@ -998,7 +994,15 @@ grafana:
 
   ## Configure additional grafana datasources (passed through tpl)
   ## ref: http://docs.grafana.org/administration/provisioning/#datasources
-  additionalDataSources: []
+  additionalDataSources:
+    - name: Loki
+      editable: true
+      access: proxy
+      type: loki
+      url: http://loki-read.svc.kubercluster.local:3100
+      jsonData:
+        maxLines: 1000
+
   # - name: prometheus-sample
   #   access: proxy
   #   basicAuth: true
@@ -1244,8 +1248,17 @@ kubelet:
     ## metrics_path is required to match upstream rules and charts
     cAdvisorRelabelings:
       - action: replace
-        sourceLabels: [__metrics_path__]
-        targetLabel: metrics_path
+        replacement: loki"
+        targetLabel: cluster
+      - targetLabel: metrics_path
+        sourceLabels:
+          - "__metrics_path__"
+      - targetLabel: "instance"
+        sourceLabels:
+          - "node"
+    #  - action: replace
+    #    sourceLabels: [__metrics_path__]
+    #    targetLabel: metrics_path
     # - sourceLabels: [__meta_kubernetes_pod_node_name]
     #   separator: ;
     #   regex: ^(.*)$
@@ -1872,7 +1885,13 @@ kube-state-metrics:
       ## RelabelConfigs to apply to samples before scraping
       ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#relabelconfig
       ##
-      relabelings: []
+      relabelings:
+        - action: replace
+          replacement: "loki"
+          targetLabel: cluster
+        - targetLabel: "instance"
+          sourceLabels:
+            - "__meta_kubernetes_pod_node_name"
       # - sourceLabels: [__meta_kubernetes_pod_node_name]
       #   separator: ;
       #   regex: ^(.*)$
@@ -1953,7 +1972,13 @@ prometheus-node-exporter:
       ## RelabelConfigs to apply to samples before scraping
       ## ref: https://github.com/prometheus-operator/prometheus-operator/blob/main/Documentation/api.md#relabelconfig
       ##
-      relabelings: []
+      relabelings:
+        - action: replace
+          replacement: "loki"
+          targetLabel: cluster
+        - targetLabel: "instance"
+          sourceLabels:
+            - "__meta_kubernetes_pod_node_name"
       # - sourceLabels: [__meta_kubernetes_pod_node_name]
       #   separator: ;
       #   regex: ^(.*)$
@@ -2018,14 +2043,9 @@ prometheusOperator:
       #   argocd.argoproj.io/hook: PreSync
       #   argocd.argoproj.io/hook-delete-policy: HookSucceeded
       podAnnotations: {}
-      nodeSelector:
-        pool: infra-pool
+      nodeSelector: {}
       affinity: {}
-      tolerations:
-        - key: node-role
-          operator: Equal
-          value: infra
-          effect: NoSchedule
+      tolerations: []
 
       ## SecurityContext holds pod-level security attributes and common container settings.
       ## This defaults to non root user with uid 2000 and gid 2000. *v1.PodSecurityContext  false
@@ -2231,7 +2251,10 @@ prometheusOperator:
 
     #   relabel configs to apply to samples before ingestion.
     ##
-    relabelings: []
+    relabelings:
+      - action: replace
+        replacement: "loki"
+        targetLabel: cluster
     # - sourceLabels: [__meta_kubernetes_pod_node_name]
     #   separator: ;
     #   regex: ^(.*)$
@@ -2257,17 +2280,12 @@ prometheusOperator:
   ## Define which Nodes the Pods are scheduled on.
   ## ref: https://kubernetes.io/docs/user-guide/node-selection/
   ##
-  nodeSelector:
-    pool: infra-pool
+  nodeSelector: {}
 
   ## Tolerations for use with node taints
   ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
   ##
-  tolerations:
-    - key: node-role
-      operator: Equal
-      value: infra
-      effect: NoSchedule
+  tolerations: []
   # - key: "key"
   #   operator: "Equal"
   #   value: "value"
@@ -2716,7 +2734,7 @@ prometheus:
     # hosts:
     #   - prometheus.domain.com
     hosts:
-      - prometheus.158.160.105.82.nip.io
+      - prometheus.158.160.120.61.nip.io
 
     ## Paths to use for ingress rules - one path should match the prometheusSpec.routePrefix
     ##
@@ -2834,7 +2852,10 @@ prometheus:
 
     #   relabel configs to apply to samples before ingestion.
     ##
-    relabelings: []
+    relabelings:
+      - action: replace
+        replacement: <CLUSTER_NAME>
+        targetLabel: cluster
     # - sourceLabels: [__meta_kubernetes_pod_node_name]
     #   separator: ;
     #   regex: ^(.*)$
@@ -2914,11 +2935,7 @@ prometheus:
     ## Tolerations for use with node taints
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
-    tolerations:
-      - key: node-role
-        operator: Equal
-        value: infra
-        effect: NoSchedule
+    tolerations: []
     #  - key: "key"
     #    operator: "Equal"
     #    value: "value"
@@ -2981,8 +2998,7 @@ prometheus:
     ## Define which Nodes the Pods are scheduled on.
     ## ref: https://kubernetes.io/docs/user-guide/node-selection/
     ##
-    nodeSelector:
-      pool: infra-pool
+    nodeSelector: {}
 
     ## Secrets is a list of Secrets in the same namespace as the Prometheus object, which shall be mounted into the Prometheus Pods.
     ## The Secrets are mounted into /etc/prometheus/secrets/. Secrets changes after initial creation of a Prometheus object are not
@@ -3012,7 +3028,7 @@ prometheus:
     ## prometheus resource to be created with selectors based on values in the helm deployment,
     ## which will also match the PrometheusRule resources created
     ##
-    ruleSelectorNilUsesHelmValues: true
+    ruleSelectorNilUsesHelmValues: false
 
     ## PrometheusRules to be selected for target discovery.
     ## If {}, select all PrometheusRules
@@ -3037,7 +3053,7 @@ prometheus:
     ## prometheus resource to be created with selectors based on values in the helm deployment,
     ## which will also match the servicemonitors created
     ##
-    serviceMonitorSelectorNilUsesHelmValues: true
+    serviceMonitorSelectorNilUsesHelmValues: false
 
     ## ServiceMonitors to be selected for target discovery.
     ## If {}, select all ServiceMonitors
@@ -3060,7 +3076,7 @@ prometheus:
     ## prometheus resource to be created with selectors based on values in the helm deployment,
     ## which will also match the podmonitors created
     ##
-    podMonitorSelectorNilUsesHelmValues: true
+    podMonitorSelectorNilUsesHelmValues: false
 
     ## PodMonitors to be selected for target discovery.
     ## If {}, select all PodMonitors
@@ -3947,8 +3963,7 @@ thanosRuler:
     ## Define which Nodes the Pods are scheduled on.
     ## ref: https://kubernetes.io/docs/user-guide/node-selection/
     ##
-    nodeSelector:
-      pool: infra-pool
+    nodeSelector: {}
 
     ## Define resources requests and limits for single Pods.
     ## ref: https://kubernetes.io/docs/user-guide/compute-resources/
@@ -3986,11 +4001,7 @@ thanosRuler:
     ## If specified, the pod's tolerations.
     ## ref: https://kubernetes.io/docs/concepts/configuration/taint-and-toleration/
     ##
-    tolerations:
-      - key: node-role
-        operator: Equal
-        value: infra
-        effect: NoSchedule
+    tolerations: []
     # - key: "key"
     #   operator: "Equal"
     #   value: "value"

@@ -15,7 +15,7 @@ roles:
   remote_cluster_client: "true"
   ml: "true"
 
-replicas: 1
+replicas: 3
 minimumMasterNodes: 0
 
 esMajorVersion: ""
@@ -171,14 +171,7 @@ antiAffinity: "hard"
 
 # This is the node affinity settings as defined in
 # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#node-affinity-beta-feature
-nodeAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-    nodeSelectorTerms:
-      - matchExpressions:
-          - key: pool
-            operator: In
-            values:
-              - infra-pool
+nodeAffinity: {}
 
 # The default is to deploy all pods serially. By setting this to parallel all pods are started at
 # the same time when bootstrapping the cluster
@@ -249,7 +242,8 @@ clusterHealthCheckParams: "wait_for_status=green&timeout=1s"
 schedulerName: ""
 
 imagePullSecrets: []
-nodeSelector: {}
+nodeSelector:
+  pool: infra-pool
 tolerations:
   - key: node-role
     value: infra
