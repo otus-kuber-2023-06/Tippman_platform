@@ -77,7 +77,7 @@ defaultRules:
 
   ## Additional labels for PrometheusRule alerts
   additionalRuleLabels:
-    cluster: "loki"
+    cluster: loki
 
   ## Additional annotations for PrometheusRule alerts
   additionalRuleAnnotations: {}
@@ -999,7 +999,7 @@ grafana:
       editable: true
       access: proxy
       type: loki
-      url: http://loki-read.svc.kubercluster.local:3100
+      url: http://loki-gateway.observability.svc.cluster.local
       jsonData:
         maxLines: 1000
 
@@ -1248,7 +1248,7 @@ kubelet:
     ## metrics_path is required to match upstream rules and charts
     cAdvisorRelabelings:
       - action: replace
-        replacement: loki"
+        replacement: loki
         targetLabel: cluster
       - targetLabel: metrics_path
         sourceLabels:
@@ -1887,7 +1887,7 @@ kube-state-metrics:
       ##
       relabelings:
         - action: replace
-          replacement: "loki"
+          replacement: loki
           targetLabel: cluster
         - targetLabel: "instance"
           sourceLabels:
@@ -1974,7 +1974,7 @@ prometheus-node-exporter:
       ##
       relabelings:
         - action: replace
-          replacement: "loki"
+          replacement: loki
           targetLabel: cluster
         - targetLabel: "instance"
           sourceLabels:
@@ -2253,7 +2253,7 @@ prometheusOperator:
     ##
     relabelings:
       - action: replace
-        replacement: "loki"
+        replacement: loki
         targetLabel: cluster
     # - sourceLabels: [__meta_kubernetes_pod_node_name]
     #   separator: ;
@@ -2854,7 +2854,7 @@ prometheus:
     ##
     relabelings:
       - action: replace
-        replacement: <CLUSTER_NAME>
+        replacement: loki
         targetLabel: cluster
     # - sourceLabels: [__meta_kubernetes_pod_node_name]
     #   separator: ;

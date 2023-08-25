@@ -1,5 +1,7 @@
 # Default values for fluent-bit.
 
+# https://github.com/fluent/helm-charts
+# repo https://fluent.github.io/helm-charts
 # kind -- DaemonSet or Deployment
 kind: DaemonSet
 
@@ -399,6 +401,7 @@ config:
         Match kube.*
         Host elasticsearch-master
         Logstash_Format On
+        Logstash_Prefix kube
         Retry_Limit False
         Replace_Dots On
         Retry_Limit False
@@ -411,7 +414,7 @@ config:
         Match host.*
         Host elasticsearch-master
         Logstash_Format On
-        Logstash_Prefix node
+        Logstash_Prefix host
         Retry_Limit False
         Replace_Dots On
         Retry_Limit False
@@ -424,21 +427,7 @@ config:
   upstream: {}
 
   ## https://docs.fluentbit.io/manual/pipeline/parsers
-  customParsers: |
-    [PARSER]
-        Name docker_no_time
-        Format json
-        Time_Keep Off
-        Time_Key time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L
-
-    [PARSER]
-        Name ingress-custom
-        Format regex
-        # XXX: modified from upstream: s/message/log/
-        Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
-        Time_Key time
-        Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+  customParsers: ""
 
   # This allows adding more files with arbitary filenames to /fluent-bit/etc/conf by providing key/value pairs.
   # The key becomes the filename, the value becomes the file content.
