@@ -385,3 +385,34 @@ kustomize build
 
 ### Проверка работоспособности:
 ![grafana-scrn.png](kubernetes-monitoring%2Fimages%2Fgrafana-scrn.png)
+
+
+## #9 Logging
+
+### В процессе сделано:
+- Установлены релизы с измененными values:
+  - ingress-nginx
+  - elasticsearch
+  - kibana
+  - fluent-bit
+  - kube-prometheus-stack
+  - loki
+  - promtail
+- Установлен парсер json логов в fluent-bit
+- Добавлен индекс паттерн kube-* в kibana
+- Добавлены дашборды в kibana с визуализацией логов nginx по статусам ответов и elasticsearch 
+- Добавлены ServiceMonitors для elasticsearch, ingress-nginx
+- Добавлен Nginx dashboard в графана
+- Добавлены логи Loki ingress-nginx в дашборд Nginx графаны
+
+### Проверка работоспособности:
+- Logs parsing fluent-bit:
+  ![kibana-log-parsed.jpg](kubernetes-logging%2Fimages%2Fkibana-log-parsed.jpg)
+- Nginx status codes from parsed logs
+  ![kibana-nginx-status-codes.jpg](kubernetes-logging%2Fimages%2Fkibana-nginx-status-codes.jpg)
+- Elasticseach dashboard
+  ![grafana-elastic-dashboard.jpg](kubernetes-logging%2Fimages%2Fgrafana-elastic-dashboard.jpg)
+- Nginx dashboard
+  ![grafana-nginx-dashboard.jpg](kubernetes-logging%2Fimages%2Fgrafana-nginx-dashboard.jpg)
+- Nginx logs Loki
+  ![grafana-nginx-dashboard-logs.jpg](kubernetes-logging%2Fimages%2Fgrafana-nginx-dashboard-logs.jpg)
