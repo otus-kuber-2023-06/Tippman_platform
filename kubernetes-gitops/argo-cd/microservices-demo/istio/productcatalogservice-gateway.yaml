@@ -1,0 +1,14 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: productcatalog-gw
+spec:
+  selector:
+    app: istio-ingress
+  servers:
+    - port:
+        number: 3550
+        name: grpc-3550
+        protocol: GRPC
+      hosts:
+        - "*"

@@ -1,0 +1,54 @@
+repositories:
+  - name: istio
+    url: https://istio-release.storage.googleapis.com/charts
+  - name: flagger
+    url: https://flagger.app
+  - name: fluxcd-community
+    url: https://fluxcd-community.github.io/helm-charts
+
+releases:
+  - name: istio-base
+    namespace: istio-system
+    chart: istio/base
+    values:
+      - istio-base-values.yaml
+  - name: istio-istiod
+    namespace: istio-system
+    chart: istio/istiod
+    needs:
+      - istio-base
+    values:
+      - istio-istiod-values.yaml
+  - name: istio-ingress
+    namespace: istio-system
+    chart: istio/gateway
+    needs:
+      - istio-istiod
+    values:
+      - istio-ingress-values.yaml
+    hooks:
+      - events: ["postsync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "apply"
+          - "-f"
+          - "./prometheus.yaml"
+  - name: flagger
+    namespace: istio-system
+    chart: flagger/flagger
+    needs:
+      - istio-ingress
+    hooks:
+      - events: ["presync"]
+        showlogs: true
+        command: "kubectl"
+        args:
+          - "apply"
+          - "-f"
+          - "./flagger-crds.yaml"
+    values:
+      - flagger-values.yaml
+  - name: flux
+    namespace: flux-system
+    chart: fluxcd-community/flux2

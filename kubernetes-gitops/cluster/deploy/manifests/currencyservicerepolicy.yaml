@@ -1,0 +1,22 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: currencyservice
+  namespace: microservices-demo
+spec:
+  image: tippman/currencyservice
+  interval: 1m0s
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: currencyservice
+  namespace: microservices-demo
+spec:
+  imageRepositoryRef:
+    name: currencyservice
+    namespace: microservices-demo
+  policy:
+    semver:
+      range: '>=0.0.2'

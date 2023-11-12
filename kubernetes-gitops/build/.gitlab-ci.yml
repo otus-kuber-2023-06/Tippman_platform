@@ -1,0 +1,50 @@
+docker-build:
+  # Use the official docker image.
+  image: docker:latest
+  stage: build
+  services:
+    - docker:dind
+  before_script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD"
+  # Default branch leaves tag empty (= latest tag)
+  # All other branches are tagged with the escaped branch name (commit ref slug)
+  script:
+    - |
+      if [[ "$CI_COMMIT_TAG" == "" ]]; then
+        tag="$CI_COMMIT_SHORT_SHA"
+      else
+        tag="$CI_COMMIT_TAG"
+      fi
+    - cd src/adservice
+    - docker build --pull -t "$CI_REGISTRY_USER/adservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/adservice:${tag}"
+    - cd ../cartservice/src
+    - docker build --pull -t "$CI_REGISTRY_USER/cartservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/cartservice:${tag}"
+    - cd ../../checkoutservice
+    - docker build --pull -t "$CI_REGISTRY_USER/checkoutservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/checkoutservice:${tag}"
+    - cd ../currencyservice
+    - docker build --pull -t "$CI_REGISTRY_USER/currencyservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/currencyservice:${tag}"
+    - cd ../emailservice
+    - docker build --pull -t "$CI_REGISTRY_USER/emailservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/emailservice:${tag}"
+    - cd ../frontend
+    - docker build --pull -t "$CI_REGISTRY_USER/frontend:${tag}" .
+    - docker push "$CI_REGISTRY_USER/frontend:${tag}"
+    - cd ../loadgenerator
+    - docker build --pull -t "$CI_REGISTRY_USER/loadgenerator:${tag}" .
+    - docker push "$CI_REGISTRY_USER/loadgenerator:${tag}"
+    - cd ../paymentservice
+    - docker build --pull -t "$CI_REGISTRY_USER/paymentservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/paymentservice:${tag}"
+    - cd ../productcatalogservice
+    - docker build --pull -t "$CI_REGISTRY_USER/productcatalogservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/productcatalogservice:${tag}"
+    - cd ../recommendationservice
+    - docker build --pull -t "$CI_REGISTRY_USER/recommendationservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/recommendationservice:${tag}"
+    - cd ../shippingservice
+    - docker build --pull -t "$CI_REGISTRY_USER/shippingservice:${tag}" .
+    - docker push "$CI_REGISTRY_USER/shippingservice:${tag}"
