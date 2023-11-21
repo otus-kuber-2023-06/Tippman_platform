@@ -1,0 +1,26 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: imageupdate
+  namespace: microservices-demo
+spec:
+  sourceRef: # moved from`.spec.checkout`
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  interval: 5m
+  update:
+    strategy: Setters
+    path: ./cluster
+  git:
+    checkout:
+      ref:
+        branch: main # moved into `ref` struct
+    commit: # moved under `git`
+      author:
+        name: "FluxCD Automation"  # moved from `authorName`
+        email: "NaN" # moved from `authorEmail`
+      messageTemplate: |
+        An automated update from FluxBot
+    push:
+      branch: main

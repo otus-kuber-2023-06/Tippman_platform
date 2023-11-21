@@ -416,3 +416,34 @@ kustomize build
   ![grafana-nginx-dashboard.jpg](kubernetes-logging%2Fimages%2Fgrafana-nginx-dashboard.jpg)
 - Nginx logs Loki
   ![grafana-nginx-dashboard-logs.jpg](kubernetes-logging%2Fimages%2Fgrafana-nginx-dashboard-logs.jpg)
+
+
+## #10 GitOps
+## В процессе сделано:
+
+GitLab
+- Зарегистрирован аккаунт и добавлены необходимые ssh ключи
+- Склонирован репозиторий microservices-demo залит в новый gitlab проект
+- Созданы helm чарты для всех микросервисов
+- Подготовлена развертка кластера Yandex Cloud через Terraform с необзодимыми - настройками
+- Настроен gitlab раннер с docker
+- Добавлена сборка образов microservices
+- Добавлен CI пайплайн для сборки образов
+- Добавлен gitlab ранер sith с shell exec
+
+GitOps
+- Установка flux через helm и настроен инициализирующий конфиг для него
+- Созданырелизы для всех микросервисов
+
+Обновление образов
+- Создан репозиторий для всех микросервисов
+- Добавлено создание и проброс ssh ключей и секретов в gitlab
+
+Flagger & Istio
+- Добален деплой istio со стандартным профилем
+- Установлен prometheus плагин
+- Установлен Flagger через helm
+- Изменен loadgenerator чарт
+- Обновлен образ frontend
+- Убедился, что  flux пытается обновить образ frontend
+- Убедился, что canary пытается анализировать новые версии образа
